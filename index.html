@@ -1,0 +1,2359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Goal Constellation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            color: white;
+            overflow-x: hidden;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 25%, #000428 50%, #004e92 75%, #000000 100%);
+            user-select: none;
+        }
+
+        /* Star Background */
+        .star-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .ambient-star {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.6);
+            animation: twinkle 3s ease-in-out infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        /* Goal Stars */
+        .goal-star {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #4ecdc4;
+            border-radius: 50%;
+            z-index: 5;
+            box-shadow: 0 0 10px currentColor;
+            animation: starPulse 2s ease-in-out infinite;
+            cursor: default;
+            pointer-events: auto;
+        }
+        
+        .goal-star.completed {
+            cursor: pointer;
+        }
+
+        .goal-star::before {
+            content: '';
+            position: absolute;
+            top: -6px;
+            left: -6px;
+            right: -6px;
+            bottom: -6px;
+            border-radius: 50%;
+            background: radial-gradient(circle, currentColor 0%, transparent 60%);
+            opacity: 0.4;
+        }
+
+        .goal-star.completed {
+            background: #ffd700;
+            color: #ffd700;
+            animation: completedPulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes starPulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        @keyframes completedPulse {
+            0%, 100% { 
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% { 
+                opacity: 0.8;
+                transform: scale(1.2);
+            }
+        }
+
+        /* Page Container */
+        .page-container {
+            position: relative;
+            z-index: 10;
+            min-height: 100vh;
+            transition: all 0.5s ease;
+        }
+
+        /* Navigation */
+        .nav-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(15px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 15px 20px;
+        }
+
+        .nav-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .app-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #4ecdc4;
+        }
+
+        .nav-toggle {
+            background: rgba(78, 205, 196, 0.3);
+            border: 1px solid rgba(78, 205, 196, 0.5);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-toggle:hover {
+            background: rgba(78, 205, 196, 0.5);
+            transform: scale(1.05);
+        }
+
+        .nav-settings {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+            margin-left: 10px;
+        }
+
+        .nav-settings:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        /* Constellation View */
+        .constellation-view {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            padding-top: 80px;
+        }
+
+        .constellation-stats {
+            position: absolute;
+            top: 100px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 20px;
+            z-index: 50;
+            max-width: 320px;
+        }
+
+        .stats-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #4ecdc4;
+        }
+
+        .stats-item {
+            font-size: 14px;
+            margin-bottom: 5px;
+            opacity: 0.9;
+        }
+
+        /* Recent Activity Section */
+        .recent-activity {
+            position: absolute;
+            top: 100px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 20px;
+            z-index: 50;
+            max-width: 320px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        @media (max-width: 768px) {
+            .recent-activity {
+                display: none;
+            }
+        }
+
+        .activity-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #4ecdc4;
+        }
+
+        .activity-item {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 10px;
+            position: relative;
+        }
+
+        .activity-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .activity-edit-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(78, 205, 196, 0.3);
+            border: 1px solid rgba(78, 205, 196, 0.5);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.3s ease;
+        }
+
+        .activity-edit-btn:hover {
+            background: rgba(78, 205, 196, 0.5);
+        }
+
+        .activity-goal-name {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #4ecdc4;
+        }
+
+        .activity-note {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 5px;
+            line-height: 1.4;
+        }
+
+        .activity-date {
+            font-size: 11px;
+            opacity: 0.6;
+        }
+
+        /* Streak Indicator */
+        .streak-indicator {
+            position: absolute;
+            bottom: 200px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 149, 0, 0.2);
+            border: 2px solid rgba(255, 149, 0, 0.5);
+            backdrop-filter: blur(20px);
+            padding: 15px 25px;
+            border-radius: 25px;
+            z-index: 50;
+            display: none;
+            text-align: center;
+            animation: streakPulse 2s ease-in-out infinite;
+        }
+
+        @media (max-width: 768px) {
+            .streak-indicator {
+                bottom: 120px;
+                padding: 10px 20px;
+            }
+        }
+
+        .streak-indicator.active {
+            display: block;
+        }
+
+        .streak-number {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .streak-text {
+            font-size: 12px;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        @keyframes streakPulse {
+            0%, 100% { 
+                box-shadow: 0 0 20px rgba(255, 149, 0, 0.3);
+            }
+            50% { 
+                box-shadow: 0 0 30px rgba(255, 149, 0, 0.5);
+            }
+        }
+
+        /* Quick Update Button */
+        .quick-update-fab {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, rgba(78, 205, 196, 0.4) 0%, rgba(68, 160, 141, 0.4) 100%);
+            border: 2px solid rgba(78, 205, 196, 0.6);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(20px);
+            z-index: 60;
+            box-shadow: 0 5px 20px rgba(78, 205, 196, 0.3);
+        }
+
+        .quick-update-fab:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 30px rgba(78, 205, 196, 0.5);
+        }
+
+        .quick-update-fab::before {
+            content: '+';
+            font-size: 32px;
+            font-weight: 300;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .quick-update-fab {
+                bottom: 20px;
+                right: 20px;
+                width: 50px;
+                height: 50px;
+            }
+            
+            .quick-update-fab::before {
+                font-size: 28px;
+            }
+        }
+
+        /* Progress Ring */
+        .progress-ring {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            z-index: 50;
+        }
+
+        @media (max-width: 768px) {
+            .progress-ring {
+                bottom: 20px;
+                left: 20px;
+            }
+            
+            .progress-ring svg {
+                width: 60px;
+                height: 60px;
+            }
+            
+            .progress-ring-bg,
+            .progress-ring-progress {
+                cx: 30;
+                cy: 30;
+                r: 26;
+            }
+            
+            .progress-ring-text {
+                font-size: 14px;
+            }
+        }
+
+        .progress-ring-circle {
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+
+        .progress-ring-bg {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.1);
+            stroke-width: 4;
+        }
+
+        .progress-ring-progress {
+            fill: none;
+            stroke: #4ecdc4;
+            stroke-width: 4;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.5s ease;
+        }
+
+        .progress-ring-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 16px;
+            font-weight: 700;
+            color: #4ecdc4;
+        }
+
+        /* Goal Preview Labels */
+        .goal-label {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 8;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        @media (max-width: 768px) {
+            .goal-label {
+                display: none;
+            }
+        }
+
+        /* Quick Update Selection Modal */
+        .quick-update-select {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .quick-update-select.active {
+            display: flex;
+        }
+
+        .quick-update-content {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 25px;
+            padding: 25px;
+            max-width: 400px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .quick-update-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #4ecdc4;
+            text-align: center;
+        }
+
+        .goal-select-item {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .goal-select-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(5px);
+        }
+
+        .goal-select-name {
+            font-size: 15px;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .goal-select-progress {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        /* Progress Highlight Card */
+        .progress-highlight {
+            position: absolute;
+            top: 300px;
+            left: 20px;
+            right: 20px;
+            max-width: 400px;
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 149, 0, 0.15) 100%);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 20px;
+            padding: 20px;
+            z-index: 45;
+            display: none;
+            box-shadow: 0 5px 20px rgba(255, 215, 0, 0.2);
+        }
+
+        .progress-highlight.active {
+            display: block;
+        }
+
+        .highlight-header {
+            font-size: 13px;
+            opacity: 0.8;
+            margin-bottom: 10px;
+            color: #ffd700;
+        }
+
+        .highlight-quote {
+            font-size: 15px;
+            font-style: italic;
+            margin-bottom: 10px;
+            line-height: 1.5;
+            color: white;
+        }
+
+        .highlight-meta {
+            font-size: 12px;
+            opacity: 0.7;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .highlight-dismiss {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 4px 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.3s ease;
+        }
+
+        .highlight-dismiss:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            .progress-highlight {
+                top: 250px;
+                left: 15px;
+                right: 15px;
+            }
+        }
+
+        /* Constellation Connection Mode */
+        .constellation-mode-active .goal-star.completed {
+            cursor: pointer;
+            animation: connectionPulse 1.5s ease-in-out infinite;
+        }
+
+        .goal-star.selected {
+            transform: scale(1.4);
+            box-shadow: 0 0 25px currentColor, 0 0 40px rgba(255, 215, 0, 0.6);
+            z-index: 15;
+        }
+
+        @keyframes connectionPulse {
+            0%, 100% { 
+                box-shadow: 0 0 10px currentColor;
+            }
+            50% { 
+                box-shadow: 0 0 20px currentColor, 0 0 35px rgba(255, 215, 0, 0.5);
+            }
+        }
+
+        .connection-mode-indicator {
+            position: absolute;
+            top: 100px;
+            right: 20px;
+            background: rgba(255, 215, 0, 0.2);
+            border: 1px solid rgba(255, 215, 0, 0.5);
+            padding: 15px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            backdrop-filter: blur(10px);
+            z-index: 50;
+            display: none;
+        }
+
+        .connection-mode-indicator.active {
+            display: block;
+        }
+
+        .stats-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #4ecdc4;
+        }
+
+        .stats-item {
+            font-size: 14px;
+            margin-bottom: 5px;
+            opacity: 0.9;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: calc(100vh - 200px);
+            text-align: center;
+            opacity: 0.7;
+        }
+
+        .empty-state h2 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #4ecdc4;
+        }
+
+        /* Goal Management View */
+        .goal-management {
+            padding: 100px 20px 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* Goal Cards */
+        .goal-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .goal-card:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .goal-card-header {
+            display: flex;
+            justify-content: between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+
+        .goal-title {
+            font-size: 18px;
+            font-weight: 600;
+            flex: 1;
+            margin-right: 15px;
+        }
+
+        .goal-category {
+            background: rgba(78, 205, 196, 0.3);
+            color: #4ecdc4;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .goal-category.finance { background: rgba(255, 193, 7, 0.3); color: #ffc107; }
+        .goal-category.health { background: rgba(40, 167, 69, 0.3); color: #28a745; }
+        .goal-category.career { background: rgba(138, 43, 226, 0.3); color: #8a2be2; }
+        .goal-category.learning { background: rgba(23, 162, 184, 0.3); color: #17a2b8; }
+
+        .goal-progress {
+            margin-bottom: 15px;
+        }
+
+        .goal-progress-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            margin-bottom: 8px;
+            opacity: 0.9;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4ecdc4 0%, #44a08d 100%);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+            position: relative;
+        }
+
+        .progress-fill.completed {
+            background: linear-gradient(90deg, #ffd700 0%, #ffed4e 100%);
+        }
+
+        
+        .goal-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            opacity: 0.7;
+            margin-bottom: 15px;
+        }
+
+        .goal-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            background: rgba(78, 205, 196, 0.3);
+            border: 1px solid rgba(78, 205, 196, 0.5);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 12px;
+            font-weight: 500;
+            backdrop-filter: blur(10px);
+        }
+
+        .btn:hover {
+            background: rgba(78, 205, 196, 0.5);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-danger {
+            background: rgba(220, 53, 69, 0.3);
+            border: 1px solid rgba(220, 53, 69, 0.5);
+            color: #dc3545;
+        }
+
+        .btn-danger:hover {
+            background: rgba(220, 53, 69, 0.5);
+        }
+
+        /* Add Goal Card */
+        .add-goal-card {
+            background: rgba(78, 205, 196, 0.1);
+            border: 2px dashed rgba(78, 205, 196, 0.3);
+        }
+
+        .add-goal-card:hover {
+            background: rgba(78, 205, 196, 0.15);
+            border-color: rgba(78, 205, 196, 0.5);
+        }
+
+        .goal-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 12px 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .goal-input:focus {
+            border-color: #4ecdc4;
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 15px rgba(78, 205, 196, 0.3);
+        }
+
+        .goal-input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .category-select {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .category-option {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 12px;
+        }
+
+        .category-option.selected {
+            background: rgba(78, 205, 196, 0.3);
+            border-color: rgba(78, 205, 196, 0.5);
+            color: #4ecdc4;
+        }
+
+        .category-option:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Shooting Star Animation */
+        .shooting-star {
+            position: fixed;
+            width: 4px;
+            height: 4px;
+            background: white;
+            border-radius: 50%;
+            z-index: 1000;
+            animation: shoot 2s ease-out forwards;
+            pointer-events: none;
+        }
+
+        .shooting-star::before {
+            content: '';
+            position: absolute;
+            top: -1px;
+            left: -80px;
+            width: 80px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent 0%, white 70%, white 100%);
+        }
+
+        @keyframes shoot {
+            0% {
+                opacity: 0;
+                transform: translateX(-50px) translateY(-25px);
+            }
+            20% {
+                opacity: 1;
+            }
+            80% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+                transform: translateX(300px) translateY(150px);
+            }
+        }
+
+        /* Update Modal */
+        .update-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .update-modal.active {
+            display: flex;
+        }
+
+        .update-modal-content {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 25px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #4ecdc4;
+        }
+
+        .modal-goal-name {
+            font-size: 16px;
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .progress-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .progress-input:focus {
+            border-color: #4ecdc4;
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 15px rgba(78, 205, 196, 0.3);
+        }
+
+        .progress-input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .modal-btn {
+            background: rgba(78, 205, 196, 0.3);
+            border: 1px solid rgba(78, 205, 196, 0.5);
+            color: white;
+            padding: 12px 25px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 16px;
+            font-weight: 500;
+            backdrop-filter: blur(10px);
+        }
+
+        .modal-btn:hover {
+            background: rgba(78, 205, 196, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .modal-btn.secondary {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .modal-btn.secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Progress History */
+        .progress-history {
+            margin-top: 15px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .progress-entry {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 8px;
+            text-align: left;
+        }
+
+        .progress-entry-date {
+            font-size: 12px;
+            opacity: 0.7;
+            margin-bottom: 5px;
+        }
+
+        .progress-entry-text {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        @media (max-width: 768px) {
+            .goal-management {
+                padding: 100px 15px 20px;
+            }
+
+            .constellation-stats {
+                position: relative;
+                top: 20px;
+                left: 0;
+                margin: 20px;
+                width: calc(100% - 40px);
+            }
+
+            .goal-card {
+                padding: 20px;
+            }
+
+            .goal-actions {
+                flex-direction: column;
+            }
+
+            .category-select {
+                justify-content: center;
+            }
+        }
+
+        /* View States */
+        .view-constellation .goal-management,
+        .view-constellation .settings-page {
+            display: none;
+        }
+
+        .view-management .constellation-view,
+        .view-management .settings-page {
+            display: none;
+        }
+
+        .view-settings .constellation-view,
+        .view-settings .goal-management {
+            display: none;
+        }
+
+        /* Settings Page */
+        .settings-page {
+            padding: 100px 20px 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .settings-section {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .settings-section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #4ecdc4;
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+
+        .setting-label {
+            flex: 1;
+        }
+
+        .setting-name {
+            font-size: 15px;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .setting-description {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        /* Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 26px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 13px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: rgba(78, 205, 196, 0.5);
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch.active .toggle-slider {
+            left: 27px;
+        }
+
+        /* Select Dropdown */
+        .setting-select {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-size: 14px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .setting-select option {
+            background: #1a1a2e;
+            color: white;
+        }
+
+        /* Action Buttons */
+        .setting-action {
+            background: rgba(78, 205, 196, 0.3);
+            border: 1px solid rgba(78, 205, 196, 0.5);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .setting-action:hover {
+            background: rgba(78, 205, 196, 0.5);
+        }
+
+        .setting-action.danger {
+            background: rgba(220, 53, 69, 0.3);
+            border-color: rgba(220, 53, 69, 0.5);
+            color: #dc3545;
+        }
+
+        .setting-action.danger:hover {
+            background: rgba(220, 53, 69, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container view-management" id="appContainer">
+        <!-- Star Background -->
+        <div class="star-background" id="starBackground"></div>
+
+        <!-- Navigation -->
+        <div class="nav-header">
+            <div class="nav-content">
+                <div class="app-title">Goal Constellation</div>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <button class="nav-settings" onclick="openSettings()">⚙️</button>
+                    <button class="nav-toggle" id="viewToggle" onclick="toggleView()">
+                        <span id="toggleText">View Stars</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Constellation View -->
+        <div class="constellation-view" id="constellationView">
+            <div class="constellation-stats">
+                <div class="stats-title">Your Universe</div>
+                <div class="stats-item">Goals: <span id="totalGoals">0</span></div>
+                <div class="stats-item">Completed: <span id="completedGoals">0</span></div>
+                <div class="stats-item">Active: <span id="activeGoals">0</span></div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="recent-activity" id="recentActivity">
+                <div class="activity-title">Recent Progress</div>
+                <div id="activityList">
+                    <p style="opacity: 0.6; font-size: 13px;">No recent activity</p>
+                </div>
+            </div>
+
+            <!-- Progress Highlight Card -->
+            <div class="progress-highlight" id="progressHighlight">
+                <div class="highlight-header" id="highlightHeader">You wrote this 30 days ago:</div>
+                <div class="highlight-quote" id="highlightQuote"></div>
+                <div class="highlight-meta">
+                    <span id="highlightMeta"></span>
+                    <button class="highlight-dismiss" onclick="dismissHighlight()">Dismiss</button>
+                </div>
+            </div>
+
+            <!-- Streak Indicator -->
+            <div class="streak-indicator" id="streakIndicator">
+                <div class="streak-number" id="streakNumber">0 🔥</div>
+                <div class="streak-text">Day Streak</div>
+            </div>
+
+            <!-- Progress Ring -->
+            <div class="progress-ring">
+                <svg width="80" height="80" id="progressRingSvg">
+                    <circle class="progress-ring-bg" cx="40" cy="40" r="36"></circle>
+                    <circle class="progress-ring-progress" id="progressCircle" 
+                            cx="40" cy="40" r="36"
+                            stroke-dasharray="226.2" 
+                            stroke-dashoffset="226.2"></circle>
+                </svg>
+                <div class="progress-ring-text" id="overallProgress">0%</div>
+            </div>
+
+            <!-- Quick Update FAB -->
+            <div class="quick-update-fab" id="quickUpdateFab" onclick="openQuickUpdate()"></div>
+
+            <div class="connection-mode-indicator" id="connectionIndicator">
+                Tap completed stars to connect them
+            </div>
+
+            <div class="empty-state" id="emptyState">
+                <h2>Your constellation awaits</h2>
+                <p>Create goals to see your personal star map</p>
+                <button class="btn" style="margin-top: 20px;" onclick="toggleView()">Create Your First Goal</button>
+            </div>
+        </div>
+
+        <!-- Quick Update Selection Modal -->
+        <div class="quick-update-select" id="quickUpdateSelect">
+            <div class="quick-update-content">
+                <div class="quick-update-title">Select Goal to Update</div>
+                <div id="goalSelectList"></div>
+                <button class="btn btn-secondary" style="width: 100%; margin-top: 15px;" onclick="closeQuickSelect()">Cancel</button>
+            </div>
+        </div>
+
+        <!-- Goal Management View -->
+        <div class="goal-management" id="goalManagement">
+            <!-- Add Goal Card -->
+            <div class="goal-card add-goal-card">
+                <div class="goal-title">Create New Goal</div>
+                <input type="text" class="goal-input" id="goalInput" placeholder="Enter your goal..." maxlength="60">
+                
+                <div class="category-select" id="categorySelect">
+                    <div class="category-option" data-category="general">General</div>
+                    <div class="category-option" data-category="health">Health</div>
+                    <div class="category-option" data-category="finance">Finance</div>
+                    <div class="category-option" data-category="career">Career</div>
+                    <div class="category-option" data-category="learning">Learning</div>
+                </div>
+
+                <div class="goal-actions">
+                    <button class="btn" onclick="addGoal()">Add to Constellation</button>
+                </div>
+            </div>
+
+            <!-- Goal List -->
+            <div id="goalList"></div>
+        </div>
+
+        <!-- Settings Page -->
+        <div class="page settings-page" id="settingsPage">
+            <!-- Notifications Section -->
+            <div class="settings-section">
+                <div class="settings-section-title">Notifications & Reminders</div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-name">Daily Reminders</div>
+                        <div class="setting-description">Get reminded to update your goals</div>
+                    </div>
+                    <div class="toggle-switch" id="dailyReminders" onclick="toggleSetting('dailyReminders')">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-name">Reminder Time</div>
+                        <div class="setting-description">When to send daily reminder</div>
+                    </div>
+                    <select class="setting-select" id="reminderTime" onchange="updateSetting('reminderTime', this.value)">
+                        <option value="morning">Morning (9 AM)</option>
+                        <option value="afternoon">Afternoon (2 PM)</option>
+                        <option value="evening">Evening (7 PM)</option>
+                    </select>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-name">Streak Alerts</div>
+                        <div class="setting-description">Notify when streak is at risk</div>
+                    </div>
+                    <div class="toggle-switch active" id="streakAlerts" onclick="toggleSetting('streakAlerts')">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Privacy & Display Section -->
+            <div class="settings-section">
+                <div class="settings-section-title">Privacy & Display</div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-name">Progress Highlights</div>
+                        <div class="setting-description">Show motivational past updates</div>
+                    </div>
+                    <div class="toggle-switch active" id="progressHighlights" onclick="toggleSetting('progressHighlights')">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-name">Star Labels</div>
+                        <div class="setting-description">Show goal names next to stars</div>
+                    </div>
+                    <div class="toggle-switch active" id="starLabels" onclick="toggleSetting('starLabels')">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-name">Ambient Stars</div>
+                        <div class="setting-description">Background star density</div>
+                    </div>
+                    <select class="setting-select" id="ambientStars" onchange="updateSetting('ambientStars', this.value)">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Data Management Section -->
+            <div class="settings-section">
+                <div class="settings-section-title">Data Management</div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-name">Export Data</div>
+                        <div class="setting-description">Download all goals and progress</div>
+                    </div>
+                    <button class="setting-action" onclick="exportData()">Export</button>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-name">Archive Completed Goals</div>
+                        <div class="setting-description">Hide completed goals from view</div>
+                    </div>
+                    <button class="setting-action" onclick="archiveCompleted()">Archive</button>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-name">Clear All Data</div>
+                        <div class="setting-description">Delete all goals permanently</div>
+                    </div>
+                    <button class="setting-action danger" onclick="clearAllData()">Clear</button>
+                </div>
+            </div>
+
+            <!-- About Section -->
+            <div class="settings-section">
+                <div class="settings-section-title">About</div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-name">Goal Constellation</div>
+                        <div class="setting-description">Version 1.0.0</div>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <div class="setting-name">Created by</div>
+                        <div class="setting-description">Built with passion for meaningful progress</div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn" style="width: 100%; margin-top: 20px;" onclick="closeSettings()">Back to Goals</button>
+        </div>
+
+        <!-- Update Progress Modal -->
+        <div class="update-modal" id="updateModal">
+            <div class="update-modal-content">
+                <div class="modal-title">Update Your Progress</div>
+                <div class="modal-goal-name" id="modalGoalName"></div>
+                
+                <textarea 
+                    class="progress-input" 
+                    id="progressNote" 
+                    placeholder="What did you accomplish today? Describe your progress..."
+                    rows="4"
+                ></textarea>
+
+                <div class="modal-actions">
+                    <button class="modal-btn" onclick="submitUpdate()">Save Progress</button>
+                    <button class="modal-btn secondary" onclick="closeUpdateModal()">Cancel</button>
+                </div>
+
+                <div class="progress-history" id="progressHistory">
+                    <!-- Recent progress entries will appear here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let goals = [];
+        let currentView = 'management';
+        let selectedCategory = 'general';
+        let currentUpdateGoal = null;
+        let connectionMode = false;
+        let selectedStarsForConnection = [];
+        
+        // Settings state
+        let settings = {
+            dailyReminders: false,
+            reminderTime: 'morning',
+            streakAlerts: true,
+            progressHighlights: true,
+            starLabels: true,
+            ambientStars: 'medium'
+        };
+
+        // Load settings from localStorage
+        function loadSettings() {
+            const saved = localStorage.getItem('goalConstellationSettings');
+            if (saved) {
+                settings = { ...settings, ...JSON.parse(saved) };
+                applySettings();
+            }
+        }
+
+        // Save settings to localStorage
+        function saveSettings() {
+            localStorage.setItem('goalConstellationSettings', JSON.stringify(settings));
+        }
+
+        // Apply settings to UI
+        function applySettings() {
+            // Update toggle switches
+            Object.keys(settings).forEach(key => {
+                const toggle = document.getElementById(key);
+                if (toggle && toggle.classList.contains('toggle-switch')) {
+                    if (settings[key]) {
+                        toggle.classList.add('active');
+                    } else {
+                        toggle.classList.remove('active');
+                    }
+                }
+            });
+            
+            // Update selects
+            if (document.getElementById('reminderTime')) {
+                document.getElementById('reminderTime').value = settings.reminderTime;
+            }
+            if (document.getElementById('ambientStars')) {
+                document.getElementById('ambientStars').value = settings.ambientStars;
+            }
+            
+            // Apply visual settings
+            if (!settings.starLabels) {
+                document.querySelectorAll('.goal-label').forEach(label => {
+                    label.style.display = 'none';
+                });
+            }
+        }
+
+        // Toggle setting
+        function toggleSetting(settingName) {
+            settings[settingName] = !settings[settingName];
+            saveSettings();
+            applySettings();
+            
+            // Special handling for certain settings
+            if (settingName === 'progressHighlights' && !settings[settingName]) {
+                document.getElementById('progressHighlight').classList.remove('active');
+            } else if (settingName === 'progressHighlights' && settings[settingName]) {
+                showProgressHighlight();
+            }
+            
+            if (settingName === 'starLabels') {
+                document.querySelectorAll('.goal-label').forEach(label => {
+                    label.style.display = settings[settingName] ? 'block' : 'none';
+                });
+            }
+        }
+
+        // Update setting value
+        function updateSetting(settingName, value) {
+            settings[settingName] = value;
+            saveSettings();
+        }
+
+        // Open settings
+        function openSettings() {
+            const container = document.getElementById('appContainer');
+            container.className = 'app-container view-settings';
+            currentView = 'settings';
+        }
+
+        // Close settings
+        function closeSettings() {
+            const container = document.getElementById('appContainer');
+            container.className = 'app-container view-management';
+            currentView = 'management';
+            document.getElementById('toggleText').textContent = 'View Stars';
+        }
+
+        // Export data
+        function exportData() {
+            const dataStr = JSON.stringify({
+                goals: goals,
+                settings: settings,
+                exportDate: new Date().toISOString()
+            }, null, 2);
+            
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'goal-constellation-export.json';
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Archive completed goals
+        function archiveCompleted() {
+            const completedCount = goals.filter(g => g.progress >= 100).length;
+            if (completedCount === 0) {
+                alert('No completed goals to archive');
+                return;
+            }
+            
+            if (confirm(`Archive ${completedCount} completed goal(s)? They will be removed from view but can be restored from exported data.`)) {
+                goals = goals.filter(g => g.progress < 100);
+                
+                // Remove completed stars and labels
+                document.querySelectorAll('.goal-star.completed').forEach(star => star.remove());
+                document.querySelectorAll('.constellation-line').forEach(line => line.remove());
+                document.querySelectorAll('.goal-label').forEach(label => {
+                    const goalId = parseInt(label.dataset.goalId);
+                    if (!goals.find(g => g.id === goalId)) {
+                        label.remove();
+                    }
+                });
+                
+                saveGoalsToStorage();
+                updateStats();
+                updateGoalList();
+            }
+        }
+
+        // Clear all data
+        function clearAllData() {
+            if (confirm('Delete ALL goals and progress permanently? This cannot be undone!')) {
+                if (confirm('Are you absolutely sure? This will delete everything.')) {
+                    goals = [];
+                    document.querySelectorAll('.goal-star').forEach(star => star.remove());
+                    document.querySelectorAll('.goal-label').forEach(label => label.remove());
+                    document.querySelectorAll('.constellation-line').forEach(line => line.remove());
+                    localStorage.removeItem('goalConstellationGoals');
+                    localStorage.removeItem('highlightDismissed');
+                    saveGoalsToStorage();
+                    updateStats();
+                    updateGoalList();
+                }
+            }
+        }
+
+        // Initialize
+        function init() {
+            initStarBackground();
+            loadSettings();
+            loadGoalsFromStorage();
+            updateStats();
+            setupCategorySelection();
+
+            // Enable connection mode when in constellation view
+            document.addEventListener('click', handleConstellationClick);
+        }
+
+        // Save goals to localStorage
+        function saveGoalsToStorage() {
+            try {
+                localStorage.setItem('goalConstellationGoals', JSON.stringify(goals));
+            } catch (e) {
+                console.error('Failed to save goals:', e);
+            }
+        }
+
+        // Load goals from localStorage
+        function loadGoalsFromStorage() {
+            try {
+                const saved = localStorage.getItem('goalConstellationGoals');
+                if (saved) {
+                    goals = JSON.parse(saved);
+                    // Recreate stars and labels for loaded goals
+                    goals.forEach(goal => {
+                        createGoalStar(goal);
+                    });
+                }
+            } catch (e) {
+                console.error('Failed to load goals:', e);
+            }
+        }
+
+        // Create star background
+        function initStarBackground() {
+            const background = document.getElementById('starBackground');
+            
+            for (let i = 0; i < 100; i++) {
+                const star = document.createElement('div');
+                star.className = 'ambient-star';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.width = star.style.height = (Math.random() * 2 + 1) + 'px';
+                star.style.animationDelay = Math.random() * 3 + 's';
+                star.style.animationDuration = (Math.random() * 2 + 2) + 's';
+                background.appendChild(star);
+            }
+        }
+
+        // Add demo goals with initial progress entries
+        function addDemoGoals() {
+            const demoGoals = [
+                { 
+                    text: 'Save $10,000', 
+                    category: 'finance', 
+                    progress: 5,
+                    progressEntries: [
+                        { date: '2025-09-25', note: 'Saved $200 from freelance work' },
+                        { date: '2025-09-27', note: 'Put $100 from paycheck into savings' }
+                    ]
+                },
+                { 
+                    text: 'Build my website', 
+                    category: 'career', 
+                    progress: 20,
+                    progressEntries: [
+                        { date: '2025-09-26', note: 'Completed homepage design mockup' },
+                        { date: '2025-09-28', note: 'Set up hosting and domain' }
+                    ]
+                },
+                { 
+                    text: '10 push-ups everyday', 
+                    category: 'health', 
+                    progress: 27,
+                    progressEntries: [
+                        { date: '2025-09-26', note: 'Did 8 push-ups, getting stronger!' },
+                        { date: '2025-09-27', note: 'Completed full 10 push-ups!' },
+                        { date: '2025-09-28', note: '12 push-ups today - feeling great' }
+                    ]
+                }
+            ];
+
+            demoGoals.forEach(demo => {
+                const goal = {
+                    id: Date.now() + Math.random(),
+                    text: demo.text,
+                    category: demo.category,
+                    progress: demo.progress,
+                    target: 100,
+                    created: new Date().toLocaleDateString(),
+                    streak: demo.progress > 20 ? Math.floor(demo.progress / 5) : 0,
+                    progressEntries: demo.progressEntries || []
+                };
+                goals.push(goal);
+                createGoalStar(goal);
+            });
+
+            updateGoalList();
+            updateStats();
+        }
+
+        // Setup category selection
+        function setupCategorySelection() {
+            document.querySelectorAll('.category-option').forEach(option => {
+                option.addEventListener('click', () => {
+                    document.querySelectorAll('.category-option').forEach(o => o.classList.remove('selected'));
+                    option.classList.add('selected');
+                    selectedCategory = option.dataset.category;
+                });
+            });
+            document.querySelector('.category-option').classList.add('selected');
+        }
+
+        // Add new goal
+        function addGoal() {
+            const input = document.getElementById('goalInput');
+            if (!input.value.trim()) return;
+
+            const goal = {
+                id: Date.now(),
+                text: input.value.trim(),
+                category: selectedCategory,
+                progress: 0,
+                target: 100,
+                created: new Date().toLocaleDateString(),
+                streak: 0,
+                progressEntries: []
+            };
+
+            goals.push(goal);
+            createGoalStar(goal);
+            
+            input.value = '';
+            updateGoalList();
+            updateStats();
+        }
+
+        // Create goal star
+        function createGoalStar(goal) {
+            const star = document.createElement('div');
+            star.className = 'goal-star' + (goal.progress >= 100 ? ' completed' : '');
+            star.style.left = Math.random() * 90 + 5 + '%';
+            star.style.top = Math.random() * 80 + 10 + '%';
+            star.dataset.goalId = goal.id;
+            
+            // Brightness based on progress
+            const brightness = 0.3 + (goal.progress / 100) * 0.7;
+            star.style.opacity = brightness;
+            
+            // Store position for later
+            goal.starX = parseFloat(star.style.left);
+            goal.starY = parseFloat(star.style.top);
+            
+            document.getElementById('starBackground').appendChild(star);
+            
+            // Create goal label
+            createGoalLabel(goal);
+        }
+
+        // Create goal label near star
+        function createGoalLabel(goal) {
+            const label = document.createElement('div');
+            label.className = 'goal-label';
+            label.textContent = goal.text;
+            label.style.left = goal.starX + 1 + '%';
+            label.style.top = (goal.starY - 3) + '%';
+            label.dataset.goalId = goal.id;
+            
+            document.getElementById('starBackground').appendChild(label);
+        }
+
+        // Update recent activity display
+        function updateRecentActivity() {
+            const activityList = document.getElementById('activityList');
+            
+            // Collect all progress entries from all goals
+            const allEntries = [];
+            goals.forEach(goal => {
+                if (goal.progressEntries && goal.progressEntries.length > 0) {
+                    goal.progressEntries.forEach((entry, index) => {
+                        allEntries.push({
+                            goalName: goal.text,
+                            goalCategory: goal.category,
+                            goalId: goal.id,
+                            entryIndex: index,
+                            ...entry
+                        });
+                    });
+                }
+            });
+            
+            // Sort by date (most recent first)
+            allEntries.sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            // Take last 3 entries
+            const recentEntries = allEntries.slice(0, 3);
+            
+            if (recentEntries.length === 0) {
+                activityList.innerHTML = '<p style="opacity: 0.6; font-size: 13px;">No recent activity</p>';
+                return;
+            }
+            
+            activityList.innerHTML = recentEntries.map(entry => `
+                <div class="activity-item">
+                    <button class="activity-edit-btn" onclick="editProgressEntry(${entry.goalId}, ${entry.entryIndex})">Edit</button>
+                    <div class="activity-goal-name">${entry.goalName}</div>
+                    <div class="activity-note">${entry.note}</div>
+                    <div class="activity-date">${entry.date}</div>
+                </div>
+            `).join('');
+        }
+
+        // Edit progress entry
+        function editProgressEntry(goalId, entryIndex) {
+            const goal = goals.find(g => g.id === goalId);
+            if (!goal || !goal.progressEntries || !goal.progressEntries[entryIndex]) return;
+            
+            const entry = goal.progressEntries[entryIndex];
+            const newNote = prompt('Edit your progress note:', entry.note);
+            
+            if (newNote && newNote.trim() && newNote.trim().length >= 10) {
+                goal.progressEntries[entryIndex].note = newNote.trim();
+                saveGoalsToStorage();
+                updateRecentActivity();
+                updateGoalList();
+            } else if (newNote !== null) {
+                alert('Progress note must be at least 10 characters');
+            }
+        }
+
+        // Select progress highlight to show
+        function selectProgressHighlight() {
+            const allEntries = [];
+            const today = new Date();
+            
+            goals.forEach(goal => {
+                if (goal.progressEntries && goal.progressEntries.length > 0) {
+                    goal.progressEntries.forEach(entry => {
+                        const entryDate = new Date(entry.date);
+                        const daysAgo = Math.floor((today - entryDate) / (1000 * 60 * 60 * 24));
+                        
+                        allEntries.push({
+                            goalName: goal.text,
+                            note: entry.note,
+                            date: entry.date,
+                            daysAgo: daysAgo,
+                            wordCount: entry.note.split(' ').length,
+                            isAnniversary: daysAgo === 7 || daysAgo === 30 || daysAgo === 90 || daysAgo === 180
+                        });
+                    });
+                }
+            });
+            
+            if (allEntries.length === 0) return null;
+            
+            // Prioritize anniversary dates
+            let anniversaryEntries = allEntries.filter(e => e.isAnniversary && e.daysAgo >= 7);
+            if (anniversaryEntries.length > 0) {
+                return anniversaryEntries[0];
+            }
+            
+            // Otherwise, find longest entry from at least a week ago
+            let oldEntries = allEntries.filter(e => e.daysAgo >= 7);
+            if (oldEntries.length > 0) {
+                oldEntries.sort((a, b) => b.wordCount - a.wordCount);
+                return oldEntries[0];
+            }
+            
+            return null;
+        }
+
+        // Show progress highlight
+        function showProgressHighlight() {
+            // Check if highlights are enabled in settings
+            if (!settings.progressHighlights) {
+                document.getElementById('progressHighlight').classList.remove('active');
+                return;
+            }
+            
+            const highlight = selectProgressHighlight();
+            const highlightCard = document.getElementById('progressHighlight');
+            
+            if (!highlight) {
+                highlightCard.classList.remove('active');
+                return;
+            }
+            
+            // Check if user has dismissed highlights recently
+            const lastDismissed = localStorage.getItem('highlightDismissed');
+            if (lastDismissed) {
+                const daysSinceDismiss = Math.floor((new Date() - new Date(lastDismissed)) / (1000 * 60 * 60 * 24));
+                if (daysSinceDismiss < 7) return; // Don't show for a week after dismiss
+            }
+            
+            document.getElementById('highlightHeader').textContent = 
+                `You wrote this ${highlight.daysAgo} ${highlight.daysAgo === 1 ? 'day' : 'days'} ago:`;
+            document.getElementById('highlightQuote').textContent = `"${highlight.note}"`;
+            document.getElementById('highlightMeta').textContent = 
+                `${highlight.goalName} • ${highlight.date}`;
+            
+            highlightCard.classList.add('active');
+        }
+
+        // Dismiss highlight
+        function dismissHighlight() {
+            document.getElementById('progressHighlight').classList.remove('active');
+            localStorage.setItem('highlightDismissed', new Date().toISOString());
+        }
+
+        // Update streak indicator
+        function updateStreakIndicator() {
+            const streakIndicator = document.getElementById('streakIndicator');
+            const streakNumber = document.getElementById('streakNumber');
+            
+            // Find longest streak
+            let maxStreak = 0;
+            goals.forEach(goal => {
+                if (goal.streak && goal.streak > maxStreak) {
+                    maxStreak = goal.streak;
+                }
+            });
+            
+            if (maxStreak > 0) {
+                streakNumber.textContent = `${maxStreak} 🔥`;
+                streakIndicator.classList.add('active');
+            } else {
+                streakIndicator.classList.remove('active');
+            }
+        }
+
+        // Update overall progress ring
+        function updateProgressRing() {
+            const circle = document.getElementById('progressCircle');
+            const text = document.getElementById('overallProgress');
+            const svg = document.getElementById('progressRingSvg');
+            
+            // Check if we're on mobile
+            const isMobile = window.innerWidth <= 768;
+            
+            if (goals.length === 0) {
+                text.textContent = '0%';
+                circle.style.strokeDashoffset = 226.2;
+                return;
+            }
+            
+            // Calculate average progress across all goals
+            const totalProgress = goals.reduce((sum, goal) => sum + goal.progress, 0);
+            const averageProgress = Math.round(totalProgress / goals.length);
+            
+            text.textContent = averageProgress + '%';
+            
+            // Update circle based on screen size
+            const circumference = isMobile ? 163.4 : 226.2; // Adjusted for smaller mobile ring
+            const offset = circumference - (averageProgress / 100) * circumference;
+            circle.style.strokeDashoffset = offset;
+            
+            // Update stroke-dasharray for mobile
+            if (isMobile) {
+                circle.setAttribute('stroke-dasharray', '163.4');
+            }
+        }
+
+        // Update progress ring on window resize
+        window.addEventListener('resize', updateProgressRing);
+
+        // Quick update function
+        function openQuickUpdate() {
+            // If no active goals, redirect to management
+            const activeGoals = goals.filter(g => g.progress < 100);
+            if (activeGoals.length === 0) {
+                toggleView();
+                return;
+            }
+            
+            // If only one active goal, open it directly
+            if (activeGoals.length === 1) {
+                openUpdateModal(activeGoals[0].id);
+                return;
+            }
+            
+            // Multiple active goals - show selection modal
+            showQuickSelectModal(activeGoals);
+        }
+
+        // Show goal selection modal
+        function showQuickSelectModal(activeGoals) {
+            const selectList = document.getElementById('goalSelectList');
+            
+            selectList.innerHTML = activeGoals.map(goal => `
+                <div class="goal-select-item" onclick="selectGoalForUpdate(${goal.id})">
+                    <div class="goal-select-name">${goal.text}</div>
+                    <div class="goal-select-progress">${goal.progress}% completed</div>
+                </div>
+            `).join('');
+            
+            document.getElementById('quickUpdateSelect').classList.add('active');
+        }
+
+        // Select goal from quick update
+        function selectGoalForUpdate(goalId) {
+            closeQuickSelect();
+            openUpdateModal(goalId);
+        }
+
+        // Close quick select modal
+        function closeQuickSelect() {
+            document.getElementById('quickUpdateSelect').classList.remove('active');
+        }
+
+        // Handle constellation clicks
+        function handleConstellationClick(e) {
+            if (currentView !== 'constellation') return;
+            
+            const star = e.target.closest('.goal-star');
+            if (!star) return;
+            
+            const goalId = parseInt(star.dataset.goalId);
+            const goal = goals.find(g => g.id === goalId);
+            
+            // Only allow connecting completed goals
+            if (!goal || goal.progress < 100) return;
+            
+            // Toggle selection
+            if (selectedStarsForConnection.includes(goalId)) {
+                selectedStarsForConnection = selectedStarsForConnection.filter(id => id !== goalId);
+                star.classList.remove('selected');
+            } else {
+                selectedStarsForConnection.push(goalId);
+                star.classList.add('selected');
+            }
+            
+            // Show/hide indicator
+            const indicator = document.getElementById('connectionIndicator');
+            if (selectedStarsForConnection.length > 0) {
+                indicator.classList.add('active');
+                indicator.textContent = selectedStarsForConnection.length === 1 
+                    ? 'Select another star to connect' 
+                    : `${selectedStarsForConnection.length} stars selected - tap to deselect`;
+            } else {
+                indicator.classList.remove('active');
+            }
+            
+            // Connect when 2 stars selected
+            if (selectedStarsForConnection.length === 2) {
+                connectSelectedStars();
+            }
+        }
+
+        // Connect two selected stars
+        function connectSelectedStars() {
+            const star1 = goals.find(g => g.id === selectedStarsForConnection[0]);
+            const star2 = goals.find(g => g.id === selectedStarsForConnection[1]);
+            
+            if (!star1 || !star2) return;
+            
+            // Create constellation line
+            const line = document.createElement('div');
+            line.className = 'constellation-line';
+            line.style.left = star1.starX + '%';
+            line.style.top = star1.starY + '%';
+            
+            const deltaX = star2.starX - star1.starX;
+            const deltaY = star2.starY - star1.starY;
+            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            const angle = Math.atan2(deltaY, deltaX) * 180 / Math.PI;
+            
+            line.style.width = distance + '%';
+            line.style.transform = `rotate(${angle}deg)`;
+            
+            document.getElementById('starBackground').appendChild(line);
+            
+            // Store connection
+            if (!star1.connections) star1.connections = [];
+            if (!star2.connections) star2.connections = [];
+            star1.connections.push(star2.id);
+            star2.connections.push(star1.id);
+            
+            // Clear selection
+            selectedStarsForConnection.forEach(id => {
+                const starEl = document.querySelector(`[data-goal-id="${id}"]`);
+                if (starEl) starEl.classList.remove('selected');
+            });
+            selectedStarsForConnection = [];
+            
+            document.getElementById('connectionIndicator').classList.remove('active');
+        }
+
+        // Open update modal
+        function openUpdateModal(goalId) {
+            const goal = goals.find(g => g.id == goalId);
+            if (!goal) return;
+
+            currentUpdateGoal = goal;
+            
+            document.getElementById('modalGoalName').textContent = goal.text;
+            document.getElementById('progressNote').value = '';
+            
+            // Show recent progress history
+            displayProgressHistory(goal);
+            
+            document.getElementById('updateModal').classList.add('active');
+            setTimeout(() => document.getElementById('progressNote').focus(), 300);
+        }
+
+        // Close update modal
+        function closeUpdateModal() {
+            document.getElementById('updateModal').classList.remove('active');
+            currentUpdateGoal = null;
+        }
+
+        // Submit progress update
+        function submitUpdate() {
+            if (!currentUpdateGoal) return;
+            
+            const noteText = document.getElementById('progressNote').value.trim();
+            if (noteText.length < 10) {
+                alert('Please describe what you accomplished (at least 10 characters)');
+                return;
+            }
+
+            const oldProgress = currentUpdateGoal.progress;
+            
+            // Smart progress increment based on goal type and content
+            let increment = getProgressIncrement(currentUpdateGoal, noteText);
+            
+            currentUpdateGoal.progress = Math.min(100, currentUpdateGoal.progress + increment);
+            
+            // Add progress entry
+            const entry = {
+                date: new Date().toLocaleDateString(),
+                note: noteText,
+                progress: increment
+            };
+            
+            if (!currentUpdateGoal.progressEntries) {
+                currentUpdateGoal.progressEntries = [];
+            }
+            currentUpdateGoal.progressEntries.unshift(entry); // Add to beginning
+            
+            // Update streak
+            const today = new Date().toDateString();
+            if (currentUpdateGoal.lastUpdate !== today) {
+                currentUpdateGoal.streak = (currentUpdateGoal.streak || 0) + 1;
+                currentUpdateGoal.lastUpdate = today;
+            }
+
+            // Update star brightness
+            const star = document.querySelector(`[data-goal-id="${currentUpdateGoal.id}"]`);
+            if (star) {
+                const brightness = 0.3 + (currentUpdateGoal.progress / 100) * 0.7;
+                star.style.opacity = brightness;
+                
+                // Complete goal
+                if (currentUpdateGoal.progress >= 100 && oldProgress < 100) {
+                    star.classList.add('completed');
+                    createShootingStar();
+                }
+            }
+
+            updateGoalList();
+            updateStats();
+            closeUpdateModal();
+            saveGoalsToStorage();
+        }
+
+        // Get progress increment based on goal type and update content
+        function getProgressIncrement(goal, noteText) {
+            let baseIncrement = 10;
+            
+            // Adjust based on category
+            if (goal.category === 'health') {
+                baseIncrement = 12;
+            } else if (goal.category === 'learning') {
+                baseIncrement = 8;
+            } else if (goal.category === 'finance') {
+                baseIncrement = 6;
+            } else if (goal.category === 'career') {
+                baseIncrement = 9;
+            }
+            
+            // Bonus for detailed updates (length-based)
+            if (noteText.length > 50) {
+                baseIncrement += 2;
+            }
+            
+            // Bonus for consistent streak
+            if (goal.streak && goal.streak > 5) {
+                baseIncrement += 1;
+            }
+            
+            return baseIncrement;
+        }
+
+        // Display progress history in modal
+        function displayProgressHistory(goal) {
+            const historyContainer = document.getElementById('progressHistory');
+            
+            if (!goal.progressEntries || goal.progressEntries.length === 0) {
+                historyContainer.innerHTML = '<p style="opacity: 0.6; text-align: center; padding: 20px;">No progress entries yet</p>';
+                return;
+            }
+            
+            const recentEntries = goal.progressEntries.slice(0, 3); // Show last 3 entries
+            historyContainer.innerHTML = recentEntries.map(entry => `
+                <div class="progress-entry">
+                    <div class="progress-entry-date">${entry.date}</div>
+                    <div class="progress-entry-text">${entry.note}</div>
+                </div>
+            `).join('');
+        }
+
+        // Create shooting star
+        function createShootingStar() {
+            const shootingStar = document.createElement('div');
+            shootingStar.className = 'shooting-star';
+            shootingStar.style.left = Math.random() * 50 + 25 + '%';
+            shootingStar.style.top = Math.random() * 30 + 10 + '%';
+            
+            document.body.appendChild(shootingStar);
+            
+            setTimeout(() => {
+                if (shootingStar.parentNode) {
+                    shootingStar.parentNode.removeChild(shootingStar);
+                }
+            }, 2000);
+        }
+
+        // Delete goal
+        function deleteGoal(goalId) {
+            goals = goals.filter(g => g.id != goalId);
+            
+            const star = document.querySelector(`[data-goal-id="${goalId}"]`);
+            if (star) star.remove();
+            
+            const label = document.querySelector(`.goal-label[data-goal-id="${goalId}"]`);
+            if (label) label.remove();
+            
+            saveGoalsToStorage();
+            updateGoalList();
+            updateStats();
+        }
+
+        // Toggle between views
+        function toggleView() {
+            const container = document.getElementById('appContainer');
+            const toggleText = document.getElementById('toggleText');
+            
+            if (currentView === 'management') {
+                container.className = 'app-container view-constellation';
+                toggleText.textContent = 'Manage Goals';
+                currentView = 'constellation';
+            } else {
+                container.className = 'app-container view-management';
+                toggleText.textContent = 'View Stars';
+                currentView = 'management';
+            }
+        }
+
+        // Update goal list
+        function updateGoalList() {
+            const goalList = document.getElementById('goalList');
+            const emptyState = document.getElementById('emptyState');
+            
+            if (goals.length === 0) {
+                goalList.innerHTML = '';
+                emptyState.style.display = 'flex';
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            
+            goalList.innerHTML = goals.map(goal => `
+                <div class="goal-card">
+                    <div class="goal-card-header">
+                        <div class="goal-title">${goal.text}</div>
+                        <div class="goal-category ${goal.category}">${goal.category}</div>
+                    </div>
+                    
+                    <div class="goal-progress">
+                        <div class="goal-progress-text">
+                            <span>${goal.progress}% completed</span>
+                            ${goal.streak > 0 ? `<span>🔥 ${goal.streak} day streak</span>` : ''}
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill ${goal.progress >= 100 ? 'completed' : ''}" 
+                                 style="width: ${goal.progress}%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="goal-meta">
+                        <span>Started: ${goal.created}</span>
+                        <span>${goal.progress >= 100 ? 'Completed ✨' : 'In Progress'}</span>
+                    </div>
+                    
+                    <div class="goal-actions">
+                        ${goal.progress < 100 ? `
+                            <button class="btn" onclick="openUpdateModal(${goal.id})">Update Progress</button>
+                        ` : `
+                            <button class="btn btn-secondary">Completed</button>
+                        `}
+                        <button class="btn btn-danger" onclick="deleteGoal(${goal.id})">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Update statistics
+        function updateStats() {
+            const total = goals.length;
+            const completed = goals.filter(g => g.progress >= 100).length;
+            const active = total - completed;
+            
+            document.getElementById('totalGoals').textContent = total;
+            document.getElementById('completedGoals').textContent = completed;
+            document.getElementById('activeGoals').textContent = active;
+            
+            // Update home screen elements
+            updateRecentActivity();
+            updateStreakIndicator();
+            updateProgressRing();
+            showProgressHighlight();
+            
+            // Show/hide empty state
+            const emptyState = document.getElementById('emptyState');
+            if (total === 0) {
+                emptyState.style.display = 'flex';
+            } else {
+                emptyState.style.display = 'none';
+            }
+        }
+
+        // Initialize on load
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
